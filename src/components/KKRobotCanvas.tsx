@@ -113,7 +113,7 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     chestPlate.rotation.x = 0.1;
     robotGroup.add(chestPlate);
 
-    // KK screen text (simple glow line/crest or simulated KK label on torso)
+    // KK screen text
     const logoGeom = new THREE.BoxGeometry(0.18, 0.04, 0.02);
     const logoMesh = new THREE.Mesh(logoGeom, glowMat);
     logoMesh.position.set(0, -0.05, 0.46);
@@ -296,6 +296,8 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
       if (robotGroup) {
         if (action === 'fly') {
           robotGroup.position.y = -0.1 + Math.sin(elapsedTime * 3) * 0.12;
+          robotGroup.rotation.z = THREE.MathUtils.lerp(robotGroup.rotation.z, 0, 0.1);
+          robotGroup.rotation.y = THREE.MathUtils.lerp(robotGroup.rotation.y, 0, 0.1);
           jetParticles.visible = true;
           // Update particles
           const posArr = jetParticles.geometry.attributes.position.array as Float32Array;
@@ -308,8 +310,13 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
             }
           }
           jetParticles.geometry.attributes.position.needsUpdate = true;
+        } else if (action === 'walk') {
+          // Handled inside walk case dynamically
+          jetParticles.visible = false;
         } else {
           robotGroup.position.y = -0.5 + Math.sin(elapsedTime * 1.8) * 0.04;
+          robotGroup.rotation.z = THREE.MathUtils.lerp(robotGroup.rotation.z, 0, 0.1);
+          robotGroup.rotation.y = THREE.MathUtils.lerp(robotGroup.rotation.y, 0, 0.1);
           jetParticles.visible = false;
         }
       }
@@ -352,6 +359,16 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
         headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, targetMouseY * 0.2, 0.1);
       }
 
+      // Smoothly reset legs when not walking
+      if (action !== 'walk' && leftLegRef.current && rightLegRef.current) {
+        leftLegRef.current.position.z = THREE.MathUtils.lerp(leftLegRef.current.position.z, 0, 0.1);
+        rightLegRef.current.position.z = THREE.MathUtils.lerp(rightLegRef.current.position.z, 0, 0.1);
+        leftLegRef.current.position.y = THREE.MathUtils.lerp(leftLegRef.current.position.y, -0.65, 0.1);
+        rightLegRef.current.position.y = THREE.MathUtils.lerp(rightLegRef.current.position.y, -0.65, 0.1);
+        leftLegRef.current.rotation.x = THREE.MathUtils.lerp(leftLegRef.current.rotation.x, 0, 0.1);
+        rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, 0.1);
+      }
+
       // Apply dynamic actions
       switch (action) {
         case 'wave':
@@ -391,13 +408,30 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
           }
           break;
         case 'walk':
-          if (leftLegRef.current && rightLegRef.current && leftArmGroup && rightArmGroup) {
-            leftLegRef.current.position.z = Math.sin(elapsedTime * 6) * 0.15;
-            rightLegRef.current.position.z = -Math.sin(elapsedTime * 6) * 0.15;
-            leftArmGroup.rotation.x = Math.sin(elapsedTime * 6) * 0.4;
-            rightArmGroup.rotation.x = -Math.sin(elapsedTime * 6) * 0.4;
-            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.15, 0.1);
-            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.15, 0.1);
+          if (leftLegRef.current && rightLegRef.current && leftArmGroup && rightArmGroup && robotGroup) {
+            const walkSpeed = 7.5;
+            // Leg swing rotation (hip rotation)
+            leftLegRef.current.rotation.x = Math.sin(elapsedTime * walkSpeed) * 0.42;
+            rightLegRef.current.rotation.x = -Math.sin(elapsedTime * walkSpeed) * 0.42;
+
+            // Lift knees/feet slightly on forward steps
+            leftLegRef.current.position.y = -0.65 + Math.max(0, Math.sin(elapsedTime * walkSpeed)) * 0.08;
+            rightLegRef.current.position.y = -0.65 + Math.max(0, -Math.sin(elapsedTime * walkSpeed)) * 0.08;
+
+            // Arm swings opposite to leg swing
+            leftArmGroup.rotation.x = -Math.sin(elapsedTime * walkSpeed) * 0.55;
+            rightArmGroup.rotation.x = Math.sin(elapsedTime * walkSpeed) * 0.55;
+
+            // Keep arm swing looking natural/outward
+            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.28, 0.15);
+            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.28, 0.15);
+
+            // Vertical hip bobbing (bob up twice per stride cycle)
+            robotGroup.position.y = -0.5 + Math.abs(Math.sin(elapsedTime * walkSpeed)) * 0.08;
+            // Hip sway side-to-side (roll)
+            robotGroup.rotation.z = Math.sin(elapsedTime * walkSpeed) * 0.05;
+            // Spine twist (yaw)
+            robotGroup.rotation.y = Math.cos(elapsedTime * walkSpeed) * 0.06;
           }
           break;
         case 'tilt':
@@ -406,13 +440,11 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
           }
           break;
         default: // idle
-          if (leftArmGroup && rightArmGroup && leftLegRef.current && rightLegRef.current) {
+          if (leftArmGroup && rightArmGroup) {
             leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.15, 0.08);
             rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.15, 0.08);
             leftArmGroup.rotation.x = THREE.MathUtils.lerp(leftArmGroup.rotation.x, Math.sin(elapsedTime * 1.5) * 0.08, 0.08);
             rightArmGroup.rotation.x = THREE.MathUtils.lerp(rightArmGroup.rotation.x, -Math.sin(elapsedTime * 1.5) * 0.08, 0.08);
-            leftLegRef.current.position.z = THREE.MathUtils.lerp(leftLegRef.current.position.z, 0, 0.1);
-            rightLegRef.current.position.z = THREE.MathUtils.lerp(rightLegRef.current.position.z, 0, 0.1);
           }
           break;
       }
