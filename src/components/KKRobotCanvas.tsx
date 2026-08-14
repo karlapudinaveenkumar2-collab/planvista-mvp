@@ -16,11 +16,7 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const robotRef = useRef<THREE.Group | null>(null);
-  const headRef = useRef<THREE.Mesh | null>(null);
-  const screenRef = useRef<THREE.Mesh | null>(null);
-  const leftEyeRef = useRef<THREE.Mesh | null>(null);
-  const rightEyeRef = useRef<THREE.Mesh | null>(null);
-  const mouthRef = useRef<THREE.Mesh | null>(null);
+  const headRef = useRef<THREE.Group | null>(null);
   const leftArmRef = useRef<THREE.Group | null>(null);
   const rightArmRef = useRef<THREE.Group | null>(null);
   const leftLegRef = useRef<THREE.Mesh | null>(null);
@@ -36,7 +32,6 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     const height = container.clientHeight || 300;
     const scene = new THREE.Scene();
 
-    // Transparent background
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.set(0, 0.4, 3.8);
 
@@ -47,8 +42,17 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
+    // Dynamic 2D Canvas for Pixar-Style Animated Face Screen
+    const faceCanvas = document.createElement('canvas');
+    faceCanvas.width = 512;
+    faceCanvas.height = 512;
+    const faceCtx = faceCanvas.getContext('2d')!;
+
+    // Create Canvas Texture
+    const faceTexture = new THREE.CanvasTexture(faceCanvas);
+
     // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -58,150 +62,133 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
-    const blueLight = new THREE.PointLight(0x00f0ff, 3, 5);
-    blueLight.position.set(0, 1, 1);
+    const blueLight = new THREE.PointLight(0x00f0ff, 4, 6);
+    blueLight.position.set(0, 0.5, 1.2);
     scene.add(blueLight);
 
-    // Robot group
+    // Robot master group
     const robotGroup = new THREE.Group();
     robotGroup.position.y = -0.5;
     scene.add(robotGroup);
     robotRef.current = robotGroup;
 
-    // Materials
-    // Glossy white metal for body parts
-    const whitePlasticMat = new THREE.MeshPhysicalMaterial({
-      color: 0xf5f5f7,
-      roughness: 0.15,
+    // Materials - Highly polished, ultra-glossy materials
+    const glossyWhiteMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.08,
       metalness: 0.1,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
+      clearcoatRoughness: 0.05,
     });
 
-    // Dark grey/black carbon fiber accent
     const darkAccentMat = new THREE.MeshPhysicalMaterial({
-      color: 0x2c2d30,
-      roughness: 0.3,
-      metalness: 0.2,
+      color: 0x18181c,
+      roughness: 0.2,
+      metalness: 0.4,
+      clearcoat: 0.5,
     });
 
-    // Black glass screen for face
-    const screenMat = new THREE.MeshPhysicalMaterial({
-      color: 0x050508,
-      roughness: 0.1,
-      metalness: 0.9,
+    const screenGlassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x030305,
+      roughness: 0.05,
+      metalness: 0.95,
       clearcoat: 1.0,
+      emissive: 0xffffff,
+      emissiveMap: faceTexture,
+      emissiveIntensity: 2.2, // Strong, vivid glow
     });
 
-    // Glowing cyan emissive for eyes and mouth
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff,
+    const jetFlameMat = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.8,
     });
 
-    // 1. Torso/Body (futuristic rounded pod with chest plate)
-    const torsoGeom = new THREE.SphereGeometry(0.55, 32, 32);
-    torsoGeom.scale(1, 1.1, 0.9);
-    const torso = new THREE.Mesh(torsoGeom, whitePlasticMat);
+    // 1. Torso/Body (Super cute, round capsule/pod shape)
+    const torsoGeom = new THREE.SphereGeometry(0.56, 36, 36);
+    torsoGeom.scale(1.0, 1.15, 0.95);
+    const torso = new THREE.Mesh(torsoGeom, glossyWhiteMat);
     torso.castShadow = true;
     torso.receiveShadow = true;
     robotGroup.add(torso);
 
-    // Chest Panel
-    const chestPlateGeom = new THREE.BoxGeometry(0.48, 0.42, 0.1, 4, 4, 4);
+    // Cute dark circular chest glass/accent plate
+    const chestPlateGeom = new THREE.BoxGeometry(0.35, 0.35, 0.12, 4, 4, 4);
     const chestPlate = new THREE.Mesh(chestPlateGeom, darkAccentMat);
-    chestPlate.position.set(0, 0.05, 0.4);
-    chestPlate.rotation.x = 0.1;
+    chestPlate.position.set(0, -0.05, 0.44);
+    chestPlate.rotation.x = 0.15;
     robotGroup.add(chestPlate);
 
-    // KK screen text
-    const logoGeom = new THREE.BoxGeometry(0.18, 0.04, 0.02);
-    const logoMesh = new THREE.Mesh(logoGeom, glowMat);
-    logoMesh.position.set(0, -0.05, 0.46);
+    // Glowing KK Core logo on chest
+    const logoGeom = new THREE.BoxGeometry(0.12, 0.03, 0.02);
+    const logoMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+    const logoMesh = new THREE.Mesh(logoGeom, logoMat);
+    logoMesh.position.set(0, -0.05, 0.51);
     robotGroup.add(logoMesh);
 
-    // 2. Head (large rounded cubic screen enclosure)
+    // 2. Head (Large, rounded cubic screen enclosure - adorable EVE/WALL-E style)
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 0.8, 0);
     robotGroup.add(headGroup);
+    headRef.current = headGroup;
 
-    const outerHeadGeom = new THREE.BoxGeometry(0.85, 0.72, 0.65, 8, 8, 8);
-    const outerHead = new THREE.Mesh(outerHeadGeom, whitePlasticMat);
+    // Casing
+    const outerHeadGeom = new THREE.BoxGeometry(0.88, 0.74, 0.68, 12, 12, 12);
+    const outerHead = new THREE.Mesh(outerHeadGeom, glossyWhiteMat);
     outerHead.castShadow = true;
     outerHead.receiveShadow = true;
     headGroup.add(outerHead);
-    headRef.current = headGroup as any;
 
-    // Face screen (curved insert)
-    const screenGeom = new THREE.BoxGeometry(0.68, 0.55, 0.1, 4, 4);
-    const screen = new THREE.Mesh(screenGeom, screenMat);
-    screen.position.set(0, 0, 0.29);
+    // Curved Front Glass Screen
+    const screenGeom = new THREE.BoxGeometry(0.72, 0.58, 0.1, 8, 8);
+    const screen = new THREE.Mesh(screenGeom, screenGlassMat);
+    screen.position.set(0, 0, 0.3);
     headGroup.add(screen);
-    screenRef.current = screen;
 
-    // Ears / Headsets
-    const earLGeom = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 24);
+    // Cute Ears with Glowing cyan ring lights
+    const earLGeom = new THREE.CylinderGeometry(0.13, 0.13, 0.14, 32);
     earLGeom.rotateZ(Math.PI / 2);
     const earL = new THREE.Mesh(earLGeom, darkAccentMat);
-    earL.position.set(-0.46, 0, 0);
+    earL.position.set(-0.48, 0, 0);
     headGroup.add(earL);
 
     const earR = earL.clone();
-    earR.position.x = 0.46;
+    earR.position.x = 0.48;
     headGroup.add(earR);
 
-    // Ear lights
-    const earLightLGeom = new THREE.SphereGeometry(0.04, 16, 16);
-    const earLightL = new THREE.Mesh(earLightLGeom, glowMat);
-    earLightL.position.set(-0.53, 0, 0);
+    // Glowing status indicators on ears
+    const earLightLGeom = new THREE.SphereGeometry(0.035, 16, 16);
+    const earLightL = new THREE.Mesh(earLightLGeom, logoMat);
+    earLightL.position.set(-0.55, 0, 0);
     headGroup.add(earLightL);
 
     const earLightR = earLightL.clone();
-    earLightR.position.x = 0.53;
+    earLightR.position.x = 0.55;
     headGroup.add(earLightR);
 
-    // 3. Eyes (cyan glowing rings or circles)
-    const eyeGeom = new THREE.RingGeometry(0.06, 0.09, 32);
-    const eyeLeft = new THREE.Mesh(eyeGeom, glowMat);
-    eyeLeft.position.set(-0.16, 0.05, 0.35);
-    headGroup.add(eyeLeft);
-    leftEyeRef.current = eyeLeft;
-
-    const eyeRight = eyeLeft.clone();
-    eyeRight.position.x = 0.16;
-    headGroup.add(eyeRight);
-    rightEyeRef.current = eyeRight;
-
-    // Expression Mouth
-    const mouthGeom = new THREE.BoxGeometry(0.12, 0.02, 0.01);
-    const mouth = new THREE.Mesh(mouthGeom, glowMat);
-    mouth.position.set(0, -0.12, 0.35);
-    headGroup.add(mouth);
-    mouthRef.current = mouth;
-
-    // 4. Arms
-    // Left Shoulder joint
+    // 3. Arms (Chubby segments, organic ball-jointed flow)
     const leftArmGroup = new THREE.Group();
-    leftArmGroup.position.set(-0.62, 0.2, 0);
+    leftArmGroup.position.set(-0.64, 0.2, 0);
     robotGroup.add(leftArmGroup);
     leftArmRef.current = leftArmGroup;
 
-    const shoulderLGeom = new THREE.SphereGeometry(0.1, 16, 16);
+    const shoulderLGeom = new THREE.SphereGeometry(0.11, 24, 24);
     const shoulderL = new THREE.Mesh(shoulderLGeom, darkAccentMat);
     leftArmGroup.add(shoulderL);
 
-    const upperArmLGeom = new THREE.CylinderGeometry(0.07, 0.07, 0.24, 16);
-    upperArmLGeom.translate(0, -0.12, 0);
-    const upperArmL = new THREE.Mesh(upperArmLGeom, whitePlasticMat);
+    const upperArmLGeom = new THREE.CylinderGeometry(0.075, 0.07, 0.22, 24);
+    upperArmLGeom.translate(0, -0.1, 0);
+    const upperArmL = new THREE.Mesh(upperArmLGeom, glossyWhiteMat);
     leftArmGroup.add(upperArmL);
 
-    const handLGeom = new THREE.SphereGeometry(0.08, 16, 16);
+    const handLGeom = new THREE.SphereGeometry(0.085, 24, 24);
     const handL = new THREE.Mesh(handLGeom, darkAccentMat);
-    handL.position.set(0, -0.28, 0);
+    handL.position.set(0, -0.26, 0);
     leftArmGroup.add(handL);
 
-    // Right Arm
+    // Right Arm Group
     const rightArmGroup = new THREE.Group();
-    rightArmGroup.position.set(0.62, 0.2, 0);
+    rightArmGroup.position.set(0.64, 0.2, 0);
     robotGroup.add(rightArmGroup);
     rightArmRef.current = rightArmGroup;
 
@@ -214,30 +201,42 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     const handR = handL.clone();
     rightArmGroup.add(handR);
 
-    // 5. Legs / Jets
-    const legLGeom = new THREE.CylinderGeometry(0.09, 0.08, 0.35, 16);
-    const legL = new THREE.Mesh(legLGeom, whitePlasticMat);
-    legL.position.set(-0.25, -0.65, 0);
+    // 4. Legs (Short, chubby organic leg pegs)
+    const legLGeom = new THREE.CylinderGeometry(0.09, 0.08, 0.32, 24);
+    const legL = new THREE.Mesh(legLGeom, glossyWhiteMat);
+    legL.position.set(-0.24, -0.62, 0);
     robotGroup.add(legL);
     leftLegRef.current = legL;
 
     const legR = legL.clone();
-    legR.position.x = 0.25;
+    legR.position.x = 0.24;
     robotGroup.add(legR);
     rightLegRef.current = legR;
 
-    // Jet Thruster caps on feet
-    const jetLGeom = new THREE.CylinderGeometry(0.11, 0.08, 0.12, 16);
+    // Jet nozzles
+    const jetLGeom = new THREE.CylinderGeometry(0.11, 0.08, 0.12, 24);
     const jetL = new THREE.Mesh(jetLGeom, darkAccentMat);
-    jetL.position.set(-0.25, -0.85, 0);
+    jetL.position.set(-0.24, -0.82, 0);
     robotGroup.add(jetL);
 
     const jetR = jetL.clone();
-    jetR.position.x = 0.25;
+    jetR.position.x = 0.24;
     robotGroup.add(jetR);
 
-    // Blue Jet Thruster Particles for Flying
-    const particleCount = 40;
+    // Jet Fire Boosters (conical flames)
+    const flameGeom = new THREE.ConeGeometry(0.08, 0.25, 16);
+    flameGeom.translate(0, -0.125, 0);
+    const flameL = new THREE.Mesh(flameGeom, jetFlameMat);
+    flameL.position.set(-0.24, -0.88, 0);
+    flameL.visible = false;
+    robotGroup.add(flameL);
+
+    const flameR = flameL.clone();
+    flameR.position.x = 0.24;
+    robotGroup.add(flameR);
+
+    // Thruster Particle Engine
+    const particleCount = 60;
     const particleGeom = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities: number[] = [];
@@ -246,15 +245,15 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
       positions[i * 3] = (Math.random() - 0.5) * 0.4;
       positions[i * 3 + 1] = -0.9 - Math.random() * 0.5;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
-      velocities.push((Math.random() - 0.5) * 0.05, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.05);
+      velocities.push((Math.random() - 0.5) * 0.06, -0.12 - Math.random() * 0.15, (Math.random() - 0.5) * 0.06);
     }
 
     particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const particleMat = new THREE.PointsMaterial({
       color: 0x00f0ff,
-      size: 0.08,
+      size: 0.09,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
       blending: THREE.AdditiveBlending,
     });
     const jetParticles = new THREE.Points(particleGeom, particleMat);
@@ -262,16 +261,16 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     robotGroup.add(jetParticles);
     jetParticlesRef.current = jetParticles;
 
-    // Shadow plane
+    // Shadow Floor
     const planeGeom = new THREE.PlaneGeometry(10, 10);
-    const planeMat = new THREE.ShadowMaterial({ opacity: 0.2 });
+    const planeMat = new THREE.ShadowMaterial({ opacity: 0.25 });
     const shadowPlane = new THREE.Mesh(planeGeom, planeMat);
     shadowPlane.rotation.x = -Math.PI / 2;
     shadowPlane.position.y = -1.2;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // Handle mouse tracking
+    // Mouse positions
     let targetMouseX = 0;
     let targetMouseY = 0;
     const handleMouseMove = (e: MouseEvent) => {
@@ -281,25 +280,161 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
     };
     window.addEventListener('mousemove', handleMouseMove);
 
-    // Animation variables
+    // Anim configuration
     const clock = new THREE.Clock();
     let blinkTimer = 0;
     let isBlinking = false;
+    let blinkFactor = 1.0;
 
-    // Animation Loop
+    // Animation loop
     let animId: number;
     const animate = () => {
       animId = requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
 
-      // Idle bobbing / Breathing
+      // Clear dynamic face canvas with dark glossy color
+      faceCtx.fillStyle = '#05050a';
+      faceCtx.fillRect(0, 0, 512, 512);
+
+      // Draw high-tech blueprint lines on screen
+      faceCtx.strokeStyle = 'rgba(0, 240, 255, 0.03)';
+      faceCtx.lineWidth = 1;
+      for (let i = 32; i < 512; i += 32) {
+        faceCtx.beginPath();
+        faceCtx.moveTo(i, 0);
+        faceCtx.lineTo(i, 512);
+        faceCtx.stroke();
+        faceCtx.beginPath();
+        faceCtx.moveTo(0, i);
+        faceCtx.lineTo(512, i);
+        faceCtx.stroke();
+      }
+
+      // 1. Calculate Eye positions with mouse tracking/look-at
+      const eyeOffsetX = targetMouseX * 18;
+      const eyeOffsetY = -targetMouseY * 12;
+
+      const leftEyeCenter = { x: 170 + eyeOffsetX, y: 220 + eyeOffsetY };
+      const rightEyeCenter = { x: 342 + eyeOffsetX, y: 220 + eyeOffsetY };
+
+      // Blinking calculation
+      blinkTimer += 0.015;
+      if (blinkTimer > 3.2) {
+        isBlinking = true;
+        blinkTimer = 0;
+      }
+      if (isBlinking) {
+        blinkFactor -= 0.22;
+        if (blinkFactor <= 0) {
+          isBlinking = false;
+        }
+      } else {
+        blinkFactor = Math.min(1.0, blinkFactor + 0.16);
+      }
+
+      // Draw Cyan Glowing Eyes
+      const drawEye = (center: { x: number; y: number }) => {
+        faceCtx.save();
+        faceCtx.translate(center.x, center.y);
+        faceCtx.scale(1, blinkFactor);
+
+        // Outer glow
+        const glowGrad = faceCtx.createRadialGradient(0, 0, 10, 0, 0, 50);
+        glowGrad.addColorStop(0, 'rgba(0, 240, 255, 0.9)');
+        glowGrad.addColorStop(0.4, 'rgba(0, 240, 255, 0.45)');
+        glowGrad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+        faceCtx.fillStyle = glowGrad;
+        faceCtx.beginPath();
+        faceCtx.arc(0, 0, 50, 0, Math.PI * 2);
+        faceCtx.fill();
+
+        // Eye core depending on expression
+        faceCtx.fillStyle = '#ffffff';
+        faceCtx.shadowColor = '#00f0ff';
+        faceCtx.shadowBlur = 15;
+
+        if (expression === 'happy') {
+          // Beautiful happy arches (WALL-E / Pixar smile)
+          faceCtx.beginPath();
+          faceCtx.arc(0, 10, 32, Math.PI * 1.15, Math.PI * 1.85);
+          faceCtx.lineWidth = 14;
+          faceCtx.strokeStyle = '#00f0ff';
+          faceCtx.lineCap = 'round';
+          faceCtx.stroke();
+        } else if (expression === 'focused') {
+          // Cute slanted focused slots
+          faceCtx.beginPath();
+          faceCtx.ellipse(0, 0, 30, 8, -0.15, 0, Math.PI * 2);
+          faceCtx.fill();
+        } else if (expression === 'thinking') {
+          // Looking upward sideways
+          faceCtx.beginPath();
+          faceCtx.arc(0, 0, 25, 0, Math.PI * 2);
+          faceCtx.fill();
+        } else { // excited
+          // Perfect glowing big circles
+          faceCtx.beginPath();
+          faceCtx.arc(0, 0, 32, 0, Math.PI * 2);
+          faceCtx.fill();
+        }
+        faceCtx.restore();
+      };
+
+      drawEye(leftEyeCenter);
+      drawEye(rightEyeCenter);
+
+      // Draw Glowing Mouth
+      faceCtx.save();
+      faceCtx.shadowColor = '#00f0ff';
+      faceCtx.shadowBlur = 12;
+      faceCtx.strokeStyle = '#00f0ff';
+      faceCtx.lineWidth = 8;
+      faceCtx.lineCap = 'round';
+
+      const mouthCenterY = 360;
+
+      if (speaking) {
+        // Dynamic bouncing/talking waveform
+        const speakingHeight = Math.abs(Math.sin(elapsedTime * 15)) * 18 + 4;
+        faceCtx.beginPath();
+        faceCtx.moveTo(216, mouthCenterY);
+        faceCtx.bezierCurveTo(
+          236, mouthCenterY - speakingHeight,
+          276, mouthCenterY - speakingHeight,
+          296, mouthCenterY
+        );
+        faceCtx.bezierCurveTo(
+          276, mouthCenterY + speakingHeight,
+          236, mouthCenterY + speakingHeight,
+          216, mouthCenterY
+        );
+        faceCtx.fillStyle = 'rgba(0, 240, 255, 0.8)';
+        faceCtx.fill();
+        faceCtx.stroke();
+      } else {
+        // Natural happy smiling curved mouth
+        faceCtx.beginPath();
+        faceCtx.arc(256, mouthCenterY - 15, 34, 0.08 * Math.PI, 0.92 * Math.PI);
+        faceCtx.stroke();
+      }
+      faceCtx.restore();
+
+      // Trigger Three.js to upload face canvas changes to GPU
+      faceTexture.needsUpdate = true;
+
+      // 2. Bobbing/Breathing Actions
       if (robotGroup) {
         if (action === 'fly') {
-          robotGroup.position.y = -0.1 + Math.sin(elapsedTime * 3) * 0.12;
+          robotGroup.position.y = -0.1 + Math.sin(elapsedTime * 3.2) * 0.14;
           robotGroup.rotation.z = THREE.MathUtils.lerp(robotGroup.rotation.z, 0, 0.1);
           robotGroup.rotation.y = THREE.MathUtils.lerp(robotGroup.rotation.y, 0, 0.1);
           jetParticles.visible = true;
-          // Update particles
+          flameL.visible = true;
+          flameR.visible = true;
+          flameL.scale.setScalar(1 + Math.sin(elapsedTime * 25) * 0.15);
+          flameR.scale.setScalar(1 + Math.sin(elapsedTime * 25) * 0.15);
+
+          // Update jet particles
           const posArr = jetParticles.geometry.attributes.position.array as Float32Array;
           for (let i = 0; i < particleCount; i++) {
             posArr[i * 3 + 1] += velocities[i * 3 + 1];
@@ -311,60 +446,31 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
           }
           jetParticles.geometry.attributes.position.needsUpdate = true;
         } else if (action === 'walk') {
-          // Handled inside walk case dynamically
           jetParticles.visible = false;
+          flameL.visible = false;
+          flameR.visible = false;
         } else {
-          robotGroup.position.y = -0.5 + Math.sin(elapsedTime * 1.8) * 0.04;
+          robotGroup.position.y = -0.5 + Math.sin(elapsedTime * 1.8) * 0.05;
           robotGroup.rotation.z = THREE.MathUtils.lerp(robotGroup.rotation.z, 0, 0.1);
           robotGroup.rotation.y = THREE.MathUtils.lerp(robotGroup.rotation.y, 0, 0.1);
           jetParticles.visible = false;
-        }
-      }
-
-      // Voice speaking jitter / eye scale pulse
-      if (speaking && elapsedTime % 0.15 < 0.08) {
-        if (mouthRef.current) {
-          mouthRef.current.scale.set(1.4, 3, 1);
-        }
-      } else {
-        if (mouthRef.current) {
-          mouthRef.current.scale.set(1, 1, 1);
-        }
-      }
-
-      // Blink cycle
-      blinkTimer += clock.getDelta();
-      if (blinkTimer > 3.5) {
-        isBlinking = true;
-        blinkTimer = 0;
-      }
-      if (isBlinking) {
-        if (leftEyeRef.current && rightEyeRef.current) {
-          leftEyeRef.current.scale.y = THREE.MathUtils.lerp(leftEyeRef.current.scale.y, 0.05, 0.4);
-          rightEyeRef.current.scale.y = THREE.MathUtils.lerp(rightEyeRef.current.scale.y, 0.05, 0.4);
-          if (leftEyeRef.current.scale.y < 0.08) {
-            isBlinking = false;
-          }
-        }
-      } else {
-        if (leftEyeRef.current && rightEyeRef.current) {
-          leftEyeRef.current.scale.y = THREE.MathUtils.lerp(leftEyeRef.current.scale.y, 1, 0.25);
-          rightEyeRef.current.scale.y = THREE.MathUtils.lerp(rightEyeRef.current.scale.y, 1, 0.25);
+          flameL.visible = false;
+          flameR.visible = false;
         }
       }
 
       // Mouse tracking head look-at
       if (headGroup && lookAtMouse) {
-        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, targetMouseX * 0.35, 0.1);
-        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, targetMouseY * 0.2, 0.1);
+        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, targetMouseX * 0.38, 0.1);
+        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, targetMouseY * 0.22, 0.1);
       }
 
-      // Smoothly reset legs when not walking
+      // Reset leg offsets smoothly when not walking
       if (action !== 'walk' && leftLegRef.current && rightLegRef.current) {
         leftLegRef.current.position.z = THREE.MathUtils.lerp(leftLegRef.current.position.z, 0, 0.1);
         rightLegRef.current.position.z = THREE.MathUtils.lerp(rightLegRef.current.position.z, 0, 0.1);
-        leftLegRef.current.position.y = THREE.MathUtils.lerp(leftLegRef.current.position.y, -0.65, 0.1);
-        rightLegRef.current.position.y = THREE.MathUtils.lerp(rightLegRef.current.position.y, -0.65, 0.1);
+        leftLegRef.current.position.y = THREE.MathUtils.lerp(leftLegRef.current.position.y, -0.62, 0.1);
+        rightLegRef.current.position.y = THREE.MathUtils.lerp(rightLegRef.current.position.y, -0.62, 0.1);
         leftLegRef.current.rotation.x = THREE.MathUtils.lerp(leftLegRef.current.rotation.x, 0, 0.1);
         rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, 0.1);
       }
@@ -373,50 +479,50 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
       switch (action) {
         case 'wave':
           if (leftArmGroup) {
-            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -1.8, 0.1);
+            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -1.8, 0.12);
             leftArmGroup.rotation.x = Math.sin(elapsedTime * 8) * 0.25;
           }
           if (rightArmGroup) {
-            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.2, 0.1);
+            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.2, 0.12);
             rightArmGroup.rotation.x = 0;
           }
           break;
         case 'point':
           if (rightArmGroup) {
-            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 1.4, 0.1);
-            rightArmGroup.rotation.x = THREE.MathUtils.lerp(rightArmGroup.rotation.x, -0.6, 0.1);
+            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 1.45, 0.12);
+            rightArmGroup.rotation.x = THREE.MathUtils.lerp(rightArmGroup.rotation.x, -0.65, 0.12);
           }
           if (leftArmGroup) {
-            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.2, 0.1);
+            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.22, 0.12);
             leftArmGroup.rotation.x = 0;
           }
           break;
         case 'explain':
           if (rightArmGroup && leftArmGroup) {
-            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.8 + Math.sin(elapsedTime * 4) * 0.15, 0.1);
-            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.8 - Math.sin(elapsedTime * 4) * 0.15, 0.1);
+            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.82 + Math.sin(elapsedTime * 4) * 0.15, 0.1);
+            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.82 - Math.sin(elapsedTime * 4) * 0.15, 0.1);
             rightArmGroup.rotation.x = Math.sin(elapsedTime * 3) * 0.2;
             leftArmGroup.rotation.x = -Math.sin(elapsedTime * 3) * 0.2;
           }
           break;
         case 'clap':
           if (rightArmGroup && leftArmGroup) {
-            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.6, 0.15);
-            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.6, 0.15);
-            rightArmGroup.rotation.y = Math.abs(Math.sin(elapsedTime * 12)) * -0.5;
-            leftArmGroup.rotation.y = Math.abs(Math.sin(elapsedTime * 12)) * 0.5;
+            rightArmGroup.rotation.z = THREE.MathUtils.lerp(rightArmGroup.rotation.z, 0.62, 0.15);
+            leftArmGroup.rotation.z = THREE.MathUtils.lerp(leftArmGroup.rotation.z, -0.62, 0.15);
+            rightArmGroup.rotation.y = Math.abs(Math.sin(elapsedTime * 14)) * -0.55;
+            leftArmGroup.rotation.y = Math.abs(Math.sin(elapsedTime * 14)) * 0.55;
           }
           break;
         case 'walk':
           if (leftLegRef.current && rightLegRef.current && leftArmGroup && rightArmGroup && robotGroup) {
-            const walkSpeed = 7.5;
+            const walkSpeed = 8.0;
             // Leg swing rotation (hip rotation)
-            leftLegRef.current.rotation.x = Math.sin(elapsedTime * walkSpeed) * 0.42;
-            rightLegRef.current.rotation.x = -Math.sin(elapsedTime * walkSpeed) * 0.42;
+            leftLegRef.current.rotation.x = Math.sin(elapsedTime * walkSpeed) * 0.44;
+            rightLegRef.current.rotation.x = -Math.sin(elapsedTime * walkSpeed) * 0.44;
 
             // Lift knees/feet slightly on forward steps
-            leftLegRef.current.position.y = -0.65 + Math.max(0, Math.sin(elapsedTime * walkSpeed)) * 0.08;
-            rightLegRef.current.position.y = -0.65 + Math.max(0, -Math.sin(elapsedTime * walkSpeed)) * 0.08;
+            leftLegRef.current.position.y = -0.62 + Math.max(0, Math.sin(elapsedTime * walkSpeed)) * 0.09;
+            rightLegRef.current.position.y = -0.62 + Math.max(0, -Math.sin(elapsedTime * walkSpeed)) * 0.09;
 
             // Arm swings opposite to leg swing
             leftArmGroup.rotation.x = -Math.sin(elapsedTime * walkSpeed) * 0.55;
@@ -447,23 +553,6 @@ export const KKRobotCanvas: React.FC<KKRobotCanvasProps> = ({
             rightArmGroup.rotation.x = THREE.MathUtils.lerp(rightArmGroup.rotation.x, -Math.sin(elapsedTime * 1.5) * 0.08, 0.08);
           }
           break;
-      }
-
-      // Expressions configuration
-      if (leftEyeRef.current && rightEyeRef.current && mouthRef.current) {
-        if (expression === 'happy') {
-          mouthRef.current.scale.set(1.5, 1, 1);
-        } else if (expression === 'thinking') {
-          leftEyeRef.current.rotation.z = 0;
-          rightEyeRef.current.rotation.z = 0;
-          mouthRef.current.scale.set(0.6, 1, 1);
-        } else if (expression === 'focused') {
-          leftEyeRef.current.rotation.z = -0.2;
-          rightEyeRef.current.rotation.z = 0.2;
-          mouthRef.current.scale.set(0.8, 0.5, 1);
-        } else if (expression === 'excited') {
-          mouthRef.current.scale.set(2, 2.5, 1);
-        }
       }
 
       renderer.render(scene, camera);

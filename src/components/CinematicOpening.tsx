@@ -143,7 +143,7 @@ export const CinematicOpening: React.FC<CinematicOpeningProps> = ({ onComplete, 
             phase === 'black'
               ? 'left-0 -translate-x-full opacity-0 scale-90 duration-[2000ms]'
               : phase === 'peek'
-              ? 'left-0 -translate-x-[48%] opacity-100 scale-100 duration-[2500ms]' // Exactly peeking using one eye from left edge of screen
+              ? 'left-0 -translate-x-[36%] opacity-100 scale-100 duration-[2500ms]' // Exactly peeking using one eye from left edge of screen
               : phase === 'walk-in'
               ? 'left-1/2 -translate-x-1/2 opacity-100 scale-100 duration-[3500ms]' // Walks smoothly to center
               : 'left-1/2 -translate-x-1/2 opacity-100 scale-110 duration-[1500ms]' // Centered zoom focus
