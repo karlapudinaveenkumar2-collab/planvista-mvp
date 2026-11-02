@@ -6,6 +6,7 @@ import { AudioSynth } from './components/AudioSynth';
 import { useVoiceController } from './hooks/useVoiceController';
 import { CinematicOpening } from './components/CinematicOpening';
 import { GuidedTour } from './components/GuidedTour';
+import { LuxuryReelAd } from './components/LuxuryReelAd';
 
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -25,6 +26,7 @@ import { AIAssistantSidebar } from './components/AIAssistantSidebar';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
+    | 'reel'
     | 'home'
     | 'dashboard'
     | 'cad'
@@ -37,9 +39,9 @@ export const App: React.FC = () => {
     | 'about'
     | 'settings'
     | 'investor'
-  >('home');
+  >('reel');
 
-  const [introComplete, setIntroComplete] = useState(false);
+  const [introComplete, setIntroComplete] = useState(true);
   const [tourOpen, setTourOpen] = useState(false);
   const [kkMode, setKkMode] = useState<'floating' | 'chat'>('floating');
   const [darkTheme, setDarkTheme] = useState(true);
@@ -103,6 +105,8 @@ export const App: React.FC = () => {
 
   const {
     speak,
+    speakFemaleVoice,
+    stopSpeaking,
     isListening,
     startListening,
     isSpeaking,
@@ -167,6 +171,7 @@ export const App: React.FC = () => {
         {/* Desktop Navbar Menu */}
         <nav className="hidden md:flex items-center gap-1.5 text-xs font-semibold">
           {[
+            { id: 'reel', label: '🎬 Cinematic Reel (9:16)' },
             { id: 'home', label: 'Home' },
             { id: 'dashboard', label: 'Dashboard' },
             { id: 'cad', label: '2D CAD' },
@@ -176,7 +181,6 @@ export const App: React.FC = () => {
             { id: 'cost', label: 'Financials' },
             { id: 'reports', label: 'AI Reports' },
             { id: 'contact', label: 'Contact' },
-            { id: 'about', label: 'About' },
             { id: 'investor', label: 'Investor' },
           ].map((item) => (
             <button
@@ -237,6 +241,13 @@ export const App: React.FC = () => {
 
       {/* Main Workspace Frame Grid */}
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'reel' && (
+          <LuxuryReelAd
+            speakFemaleVoice={speakFemaleVoice}
+            stopSpeaking={stopSpeaking}
+          />
+        )}
+
         {activeTab === 'home' && (
           <HomePage
             onStartDesigning={() => {
